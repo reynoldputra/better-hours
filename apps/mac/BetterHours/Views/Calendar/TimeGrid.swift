@@ -22,7 +22,10 @@ struct TimeGrid: View {
                 .frame(height: Metrics.hourHeight * CGFloat(Self.hours))
             }
             .scrollIndicators(.hidden)
-            .onAppear { proxy.scrollTo(scrollHour, anchor: .top) }
+            .task {
+                await Task.yield()
+                proxy.scrollTo(scrollHour, anchor: .top)
+            }
         }
     }
 

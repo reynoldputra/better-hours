@@ -5,6 +5,7 @@ struct BlockView: View {
     let piece: DayPiece
     let palette: PaletteColor
     let format: TimeFormat
+    @State private var hovering = false
 
     private var shortBlock: Bool { piece.end.timeIntervalSince(piece.start) <= 30 * 60 }
 
@@ -45,5 +46,7 @@ struct BlockView: View {
         .background(fill)
         .overlay(alignment: .leading) { edge.frame(width: 3) }
         .clipShape(shape)
+        .shadow(color: hovering ? Theme.shadow : .clear, radius: 6, y: 4)
+        .onHover { hovering = $0 }
     }
 }

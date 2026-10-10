@@ -21,7 +21,6 @@ enum Metrics {
     static let hourHeight: CGFloat = 56
     static let minBlockHeight: CGFloat = 14
     static let gutterWidth: CGFloat = 56
-    static let toolbarHeight: CGFloat = 52
     static let dayHeaderHeight: CGFloat = 48
 }
 

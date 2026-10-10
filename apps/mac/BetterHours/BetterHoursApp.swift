@@ -20,13 +20,13 @@ struct BetterHoursApp: App {
 
     var body: some Scene {
         Window("Better Hours", id: "main") {
-            MainWindowView(calendar: calendar, library: library, leadingInset: 78)
+            MainWindowView(calendar: calendar, library: library)
                 .frame(minWidth: 900, minHeight: 560)
                 .task { await calendar.observeChanges() }
                 .task { await calendar.tickClock() }
                 .task { await library.observeChanges() }
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .defaultSize(width: 1120, height: 720)
     }
 
