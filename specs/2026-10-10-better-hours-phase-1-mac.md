@@ -306,7 +306,18 @@ The app follows the system appearance. There is no in-app theme switch in phase 
 
 **App icon and glyph:** generated from the mark on the canvas into the asset catalog sizes macOS needs.
 
-## 12. Empty and edge states
+## 12. Interaction baseline
+
+Every screen has to behave like a Mac app, not only look like the design. This is a requirement of each build step, not a polish pass at the end.
+
+- **System chrome first.** The main window uses the real window toolbar (unified style) for navigation, the range title, the Week/Day switch, and the projects and tags button. The system then owns the spacing beside the window buttons, window dragging, double-click to zoom on the toolbar only, and toolbar button states. The app does not hide the title bar or draw its own.
+- **System controls first.** Buttons, pickers, text fields, menus, and alerts are the standard controls, tinted with the theme's accent. A custom-drawn control is used only where no system control fits: time blocks, tags, and the calendar grid.
+- **States on every custom element.** Each one has hover, pressed, selected, keyboard-focus, and disabled appearances where they apply, as drawn on the canvas's component states sheet.
+- **Pointer.** Buttons keep the arrow pointer, as on macOS generally. Block edges show the resize pointer, text fields the I-beam, and a block being dragged the closed hand.
+- **Tooltips and labels.** Every icon-only control has a tooltip and an accessibility label.
+- **Verification.** A step is not done on snapshots alone. Each step's report lists the interactions that were tried in the running app and the ones nobody has seen.
+
+## 12a. Empty and edge states
 
 - **First launch:** an empty week, the timer bar idle, and one line of hint text in the grid: "Drag on the calendar to block time, or press Start."
 - **No projects:** the project picker shows "No project" and "New project…".
