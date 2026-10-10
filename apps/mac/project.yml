@@ -1,0 +1,66 @@
+name: BetterHours
+options:
+  bundleIdPrefix: io.github.reynoldputra
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+packages:
+  BetterHoursCore:
+    path: Packages/BetterHoursCore
+targets:
+  BetterHours:
+    type: application
+    platform: macOS
+    sources:
+      - BetterHours
+    dependencies:
+      - package: BetterHoursCore
+    settings:
+      base:
+        PRODUCT_NAME: Better Hours
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.reynoldputra.BetterHours
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Better Hours
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_APP_SANDBOX: NO
+        ENABLE_HARDENED_RUNTIME: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
+        SWIFT_EMIT_LOC_STRINGS: NO
+  BetterHoursTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - BetterHoursTests
+    dependencies:
+      - target: BetterHours
+      - package: BetterHoursCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.reynoldputra.BetterHoursTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Better Hours.app/Contents/MacOS/Better Hours"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  BetterHours:
+    build:
+      targets:
+        BetterHours: all
+        BetterHoursTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - BetterHoursTests
