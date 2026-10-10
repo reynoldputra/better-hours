@@ -1,0 +1,14 @@
+{
+  "cases": [
+    { "name": "exact", "input": { "date": "2026-10-08T09:15:00.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T09:15:00.000Z" },
+    { "name": "round down", "input": { "date": "2026-10-08T09:12:00.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T09:10:00.000Z" },
+    { "name": "round up", "input": { "date": "2026-10-08T09:13:00.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T09:15:00.000Z" },
+    { "name": "half rounds up", "input": { "date": "2026-10-08T09:02:30.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T09:05:00.000Z" },
+    { "name": "just below half rounds down", "input": { "date": "2026-10-08T09:02:29.999Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T09:00:00.000Z" },
+    { "name": "hour rollover", "input": { "date": "2026-10-08T09:58:00.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-08T10:00:00.000Z" },
+    { "name": "day rollover", "input": { "date": "2026-10-08T23:57:45.000Z", "step": 5, "timeZone": "UTC" }, "expected": "2026-10-09T00:00:00.000Z" },
+    { "name": "fifteen minute step", "input": { "date": "2026-10-08T09:23:00.000Z", "step": 15, "timeZone": "UTC" }, "expected": "2026-10-08T09:30:00.000Z" },
+    { "name": "grid follows the local hour in a 45 minute offset zone", "input": { "date": "2026-10-08T09:07:00.000Z", "step": 5, "timeZone": "Asia/Kathmandu" }, "expected": "2026-10-08T09:05:00.000Z" },
+    { "name": "half hour step lands on the local hour in a 45 minute offset zone", "input": { "date": "2026-10-08T09:00:00.000Z", "step": 30, "timeZone": "Asia/Kathmandu" }, "expected": "2026-10-08T09:15:00.000Z" }
+  ]
+}

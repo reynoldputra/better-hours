@@ -1,0 +1,105 @@
+{
+  "cases": [
+    {
+      "name": "block fully inside the interval",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:30:00.000Z" }]
+      },
+      "expected": 5400
+    },
+    {
+      "name": "block clipped at the start",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-07T23:00:00.000Z", "endAt": "2026-10-08T01:00:00.000Z" }]
+      },
+      "expected": 3600
+    },
+    {
+      "name": "block clipped at the end",
+      "input": {
+        "now": "2026-10-09T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-08T22:30:00.000Z", "endAt": "2026-10-09T02:00:00.000Z" }]
+      },
+      "expected": 5400
+    },
+    {
+      "name": "block crossing midnight counts each day its own part",
+      "input": {
+        "now": "2026-10-09T12:00:00.000Z",
+        "interval": { "start": "2026-10-09T00:00:00.000Z", "end": "2026-10-10T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-08T22:00:00.000Z", "endAt": "2026-10-09T03:00:00.000Z" }]
+      },
+      "expected": 10800
+    },
+    {
+      "name": "running block counts up to now",
+      "input": {
+        "now": "2026-10-08T11:15:30.500Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-08T11:00:00.000Z", "endAt": null }]
+      },
+      "expected": 930.5
+    },
+    {
+      "name": "running block is clipped at the end of the interval",
+      "input": {
+        "now": "2026-10-09T06:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [{ "id": "a", "startAt": "2026-10-08T20:00:00.000Z", "endAt": null }]
+      },
+      "expected": 14400
+    },
+    {
+      "name": "blocks outside the interval",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [
+          { "id": "before", "startAt": "2026-10-07T09:00:00.000Z", "endAt": "2026-10-07T10:00:00.000Z" },
+          { "id": "touching-start", "startAt": "2026-10-07T23:00:00.000Z", "endAt": "2026-10-08T00:00:00.000Z" },
+          { "id": "touching-end", "startAt": "2026-10-09T00:00:00.000Z", "endAt": "2026-10-09T01:00:00.000Z" },
+          { "id": "after", "startAt": "2026-10-10T09:00:00.000Z", "endAt": "2026-10-10T10:00:00.000Z" }
+        ]
+      },
+      "expected": 0
+    },
+    {
+      "name": "empty list",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": []
+      },
+      "expected": 0
+    },
+    {
+      "name": "overlapping blocks are each counted in full",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:00:00.000Z" }
+        ]
+      },
+      "expected": 7200
+    },
+    {
+      "name": "several blocks are summed",
+      "input": {
+        "now": "2026-10-08T12:00:00.000Z",
+        "interval": { "start": "2026-10-08T00:00:00.000Z", "end": "2026-10-09T00:00:00.000Z" },
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T13:00:00.000Z", "endAt": "2026-10-08T13:45:00.000Z" }
+        ]
+      },
+      "expected": 6300
+    }
+  ]
+}

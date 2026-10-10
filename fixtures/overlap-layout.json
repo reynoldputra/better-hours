@@ -1,0 +1,106 @@
+{
+  "cases": [
+    {
+      "name": "no overlap",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T11:00:00.000Z", "endAt": "2026-10-08T12:00:00.000Z" }
+        ]
+      },
+      "expected": { "a": { "index": 0, "count": 1 }, "b": { "index": 0, "count": 1 } }
+    },
+    {
+      "name": "two overlapping",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T11:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T10:00:00.000Z", "endAt": "2026-10-08T12:00:00.000Z" }
+        ]
+      },
+      "expected": { "a": { "index": 0, "count": 2 }, "b": { "index": 1, "count": 2 } }
+    },
+    {
+      "name": "three-way chain where count is 2",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T11:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T10:00:00.000Z", "endAt": "2026-10-08T12:00:00.000Z" },
+          { "id": "c", "startAt": "2026-10-08T11:30:00.000Z", "endAt": "2026-10-08T13:00:00.000Z" }
+        ]
+      },
+      "expected": {
+        "a": { "index": 0, "count": 2 },
+        "b": { "index": 1, "count": 2 },
+        "c": { "index": 0, "count": 2 }
+      }
+    },
+    {
+      "name": "three mutually overlapping",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T12:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T09:30:00.000Z", "endAt": "2026-10-08T11:30:00.000Z" },
+          { "id": "c", "startAt": "2026-10-08T10:00:00.000Z", "endAt": "2026-10-08T11:00:00.000Z" }
+        ]
+      },
+      "expected": {
+        "a": { "index": 0, "count": 3 },
+        "b": { "index": 1, "count": 3 },
+        "c": { "index": 2, "count": 3 }
+      }
+    },
+    {
+      "name": "touching blocks do not overlap",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T10:00:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T10:00:00.000Z", "endAt": "2026-10-08T11:00:00.000Z" }
+        ]
+      },
+      "expected": { "a": { "index": 0, "count": 1 }, "b": { "index": 0, "count": 1 } }
+    },
+    {
+      "name": "running block ends at now",
+      "input": {
+        "now": "2026-10-08T11:00:00.000Z",
+        "blocks": [
+          { "id": "a", "startAt": "2026-10-08T10:00:00.000Z", "endAt": null },
+          { "id": "b", "startAt": "2026-10-08T10:30:00.000Z", "endAt": "2026-10-08T10:45:00.000Z" },
+          { "id": "c", "startAt": "2026-10-08T11:00:00.000Z", "endAt": "2026-10-08T12:00:00.000Z" }
+        ]
+      },
+      "expected": {
+        "a": { "index": 0, "count": 2 },
+        "b": { "index": 1, "count": 2 },
+        "c": { "index": 0, "count": 1 }
+      }
+    },
+    {
+      "name": "input order does not matter and a freed column is reused",
+      "input": {
+        "now": "2026-10-08T20:00:00.000Z",
+        "blocks": [
+          { "id": "c", "startAt": "2026-10-08T10:30:00.000Z", "endAt": "2026-10-08T11:30:00.000Z" },
+          { "id": "b", "startAt": "2026-10-08T09:30:00.000Z", "endAt": "2026-10-08T10:15:00.000Z" },
+          { "id": "a", "startAt": "2026-10-08T09:00:00.000Z", "endAt": "2026-10-08T11:00:00.000Z" }
+        ]
+      },
+      "expected": {
+        "a": { "index": 0, "count": 2 },
+        "b": { "index": 1, "count": 2 },
+        "c": { "index": 1, "count": 2 }
+      }
+    },
+    {
+      "name": "empty list",
+      "input": { "now": "2026-10-08T20:00:00.000Z", "blocks": [] },
+      "expected": {}
+    }
+  ]
+}
