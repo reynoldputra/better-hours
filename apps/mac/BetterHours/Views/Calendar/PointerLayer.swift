@@ -83,11 +83,13 @@ final class PointerView: NSView {
     }
 
     private func send(_ phase: PointerEvent.Phase, _ event: NSEvent) {
+        // clickCount raises on entered, exited and moved events.
+        let isButtonEvent = phase == .down || phase == .up || phase == .dragged
         let event = PointerEvent(
             phase: phase,
             location: convert(event.locationInWindow, from: nil),
             width: bounds.width,
-            clickCount: event.clickCount
+            clickCount: isButtonEvent ? event.clickCount : 0
         )
         onPointer?(event)?.set()
     }
