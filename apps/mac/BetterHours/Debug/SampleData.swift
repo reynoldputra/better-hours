@@ -1,3 +1,4 @@
+#if DEBUG
 import BetterHoursCore
 import Foundation
 
@@ -19,6 +20,12 @@ enum SampleData {
     @MainActor
     static func seeded() async throws -> LocalStore {
         let store = try LocalStore.inMemory()
+        try await seed(into: store)
+        return store
+    }
+
+    @MainActor
+    static func seed(into store: LocalStore) async throws {
         let website = Project(name: "Website", color: .blue)
         let backend = Project(name: "Backend", color: .orange)
         let writing = Project(name: "Writing", color: .purple)
@@ -41,6 +48,6 @@ enum SampleData {
         for (title, project, start, end) in blocks {
             try await store.save(TimeBlock(title: title, projectId: project.id, startAt: start, endAt: end))
         }
-        return store
     }
 }
+#endif

@@ -17,6 +17,7 @@ struct MainWindowView: View {
             }
             DayHeaderRow(columns: columns, format: format)
             TimeGrid(
+                model: calendar,
                 columns: columns,
                 library: library,
                 format: format,
@@ -28,5 +29,24 @@ struct MainWindowView: View {
         .foregroundStyle(Theme.text)
         .background(Theme.background)
         .calendarToolbar(calendar)
+        .confirmationDialog(
+            "Delete this block?",
+            isPresented: Binding(get: { calendar.pendingDeleteId != nil }, set: { if !$0 { calendar.pendingDeleteId = nil } }),
+            titleVisibility: .visible,
+            presenting: calendar.pendingDeleteId
+        ) { id in
+            Button("Delete", role: .destructive) { Task { await calendar.deleteBlock(id: id) } }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("This cannot be undone.")
+        }
+        .alert(
+            "Better Hours could not save",
+            isPresented: Binding(get: { calendar.writeError != nil }, set: { if !$0 { calendar.writeError = nil } })
+        ) {
+            Button("OK") {}
+        } message: {
+            Text(calendar.writeError ?? "")
+        }
     }
 }

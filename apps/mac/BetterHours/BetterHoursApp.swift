@@ -11,10 +11,15 @@ struct BetterHoursApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
     @State private var calendar: CalendarModel
     @State private var library: LibraryModel
+    private let demo: DemoConfiguration?
 
     init() {
-        let store = Self.openStore()
-        _calendar = State(initialValue: CalendarModel(store: store, clock: Date.init, calendar: .autoupdatingCurrent))
+        let demo = Demo.configuration()
+        let store = demo?.store ?? Self.openStore()
+        self.demo = demo
+        _calendar = State(initialValue: CalendarModel(
+            store: store, clock: demo?.clock ?? Date.init, calendar: demo?.calendar ?? .autoupdatingCurrent
+        ))
         _library = State(initialValue: LibraryModel(store: store))
     }
 
@@ -25,6 +30,7 @@ struct BetterHoursApp: App {
                 .task { await calendar.observeChanges() }
                 .task { await calendar.tickClock() }
                 .task { await library.observeChanges() }
+                .task { await demo?.apply(to: calendar) }
         }
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1120, height: 720)

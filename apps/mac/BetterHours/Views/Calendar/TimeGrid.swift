@@ -2,6 +2,7 @@ import BetterHoursCore
 import SwiftUI
 
 struct TimeGrid: View {
+    let model: CalendarModel
     let columns: [DayColumn]
     let library: LibraryModel
     let format: TimeFormat
@@ -9,6 +10,7 @@ struct TimeGrid: View {
     let scrollHour: Int
 
     private static let hours = 24
+    @State private var interactor = GridInteractor()
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -16,10 +18,20 @@ struct TimeGrid: View {
                 HStack(alignment: .top, spacing: 0) {
                     gutter
                     ForEach(columns) { column in
-                        DayColumnView(column: column, library: library, format: format, now: now)
+                        DayColumnView(
+                            column: column, model: model, library: library, format: format, now: now,
+                            hoveredId: hoveredId
+                        )
+                        .zIndex(column.pieces.contains { $0.id == model.selectedBlockId } ? 1 : 0)
                     }
                 }
                 .frame(height: Metrics.hourHeight * CGFloat(Self.hours))
+                .overlay {
+                    PointerLayer(
+                        onPointer: { interactor.handle($0, model: model, columns: columns) },
+                        onKey: { interactor.handle($0, model: model) }
+                    )
+                }
             }
             .scrollIndicators(.hidden)
             .task {
@@ -27,6 +39,11 @@ struct TimeGrid: View {
                 proxy.scrollTo(scrollHour, anchor: .top)
             }
         }
+    }
+
+    private var hoveredId: UUID? {
+        if case .block(let id, _) = interactor.hover { return id }
+        return nil
     }
 
     private var gutter: some View {
@@ -47,11 +64,11 @@ struct TimeGrid: View {
 
 struct DayColumnView: View {
     let column: DayColumn
+    let model: CalendarModel
     let library: LibraryModel
     let format: TimeFormat
     let now: Date
-
-    private let inset: CGFloat = 3
+    let hoveredId: UUID?
 
     var body: some View {
         GeometryReader { geo in
@@ -60,6 +77,7 @@ struct DayColumnView: View {
                 ForEach(column.pieces) { piece in
                     block(piece, width: geo.size.width)
                 }
+                if let drag = model.drag { preview(drag, width: geo.size.width) }
                 if column.isToday { nowLine }
             }
         }
@@ -77,19 +95,60 @@ struct DayColumnView: View {
         }
     }
 
-    private func y(_ date: Date) -> CGFloat {
-        CGFloat(date.timeIntervalSince(column.start) / 3600) * Metrics.hourHeight
-    }
+    private func y(_ date: Date) -> CGFloat { GridGeometry.y(date, from: column.start) }
 
     private func block(_ piece: DayPiece, width: CGFloat) -> some View {
-        let count = CGFloat(piece.slot.count)
-        let slotWidth = (width - 2 * inset) / count
-        let top = y(piece.start) + 1
-        let height = max(y(piece.end) - y(piece.start) - 2, Metrics.minBlockHeight)
+        let frame = GridGeometry.blockFrame(piece, columnStart: column.start, columnWidth: width)
         let palette = library.project(id: piece.block.projectId)?.color ?? .gray
-        return BlockView(piece: piece, palette: palette, format: format)
-            .frame(width: piece.slot.count > 1 ? slotWidth - 1 : slotWidth, height: height)
-            .offset(x: inset + CGFloat(piece.slot.index) * slotWidth, y: top)
+        let dragged = model.drag?.kind.blockId == piece.id
+        return BlockView(
+            piece: piece, palette: palette, format: format,
+            appearance: dragged ? .origin : .normal,
+            isSelected: model.selectedBlockId == piece.id,
+            isHovering: hoveredId == piece.id && model.drag == nil
+        )
+        .frame(width: frame.width, height: frame.height)
+        .popover(isPresented: editorBinding(for: piece), arrowEdge: .trailing) {
+            BlockEditorView(calendar: model, library: library)
+        }
+        .padding(.leading, frame.minX)
+        .padding(.top, frame.minY)
+    }
+
+    private func editorBinding(for piece: DayPiece) -> Binding<Bool> {
+        Binding(
+            get: { piece.isFirstPiece && model.editing?.id == piece.id },
+            set: { if !$0 { model.cancelEditor() } }
+        )
+    }
+
+    @ViewBuilder
+    private func preview(_ drag: DragPreview, width: CGFloat) -> some View {
+        let start = max(drag.start, column.start)
+        let end = min(drag.end, column.end)
+        if end > start, drag.kind != .create || end.timeIntervalSince(start) >= BlockRules.minimum {
+            let top = y(start) + 1
+            let height = max(y(end) - y(start) - 2, Metrics.minBlockHeight)
+            let inset = GridGeometry.inset
+            Group {
+                if let id = drag.kind.blockId, let source = model.blocks.first(where: { $0.id == id }) {
+                    BlockView(
+                        piece: DayPiece(
+                            block: source, start: start, end: end, slot: ColumnSlot(index: 0, count: 1),
+                            isRunningNow: source.endAt == nil && column.isToday, isFirstPiece: false
+                        ),
+                        palette: library.project(id: source.projectId)?.color ?? .gray,
+                        format: format, appearance: .dragging
+                    )
+                } else {
+                    NewBlockGhost(start: drag.start, end: drag.end, format: format)
+                }
+            }
+            .frame(width: width - 2 * inset, height: height)
+            .padding(.leading, inset)
+            .padding(.top, top)
+            .allowsHitTesting(false)
+        }
     }
 
     private var nowLine: some View {

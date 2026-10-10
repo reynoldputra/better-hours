@@ -33,6 +33,39 @@ final class SnapshotTests: XCTestCase {
         }
     }
 
+    func testRenderInteractionStates() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        let states: [(String, @MainActor (CalendarModel) throws -> Void)] = [
+            ("selected", { model in
+                model.select(try XCTUnwrap(model.blocks.first { $0.title == "API schema" }?.id))
+            }),
+            ("creating", { model in
+                model.beginCreate(at: SampleData.date(9, 10, 2))
+                model.updateDrag(to: SampleData.date(9, 11, 1))
+            }),
+            ("moving", { model in
+                let id = try XCTUnwrap(model.blocks.first { $0.title == "Design review" }?.id)
+                model.beginMove(id: id, pointerTime: SampleData.date(5, 9, 20))
+                model.updateDrag(to: SampleData.date(9, 14, 22))
+            }),
+        ]
+        for (state, configure) in states {
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                let store = try await SampleData.seeded()
+                let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+                let library = LibraryModel(store: store)
+                await calendar.reload()
+                await library.reload()
+                try configure(calendar)
+                let view = MainWindowView(calendar: calendar, library: library, scrollHour: 8)
+                let file = outputDirectory.appendingPathComponent("week-\(state)-\(name).png")
+                try await render(view, appearance: appearance, to: file)
+                let size = try XCTUnwrap(try? Data(contentsOf: file)).count
+                XCTAssertGreaterThan(size, 10_000, "\(file.lastPathComponent) looks empty")
+            }
+        }
+    }
+
     private func render(_ view: some View, appearance: NSAppearance.Name, to url: URL) async throws {
         let host = NSHostingView(rootView: view.frame(width: Self.size.width, height: Self.size.height))
         let window = NSWindow(

@@ -53,7 +53,7 @@ enum Fonts {
 }
 
 extension PaletteColor {
-    private var assetName: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
+    var assetName: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
     var fill: Color { Color("Project\(assetName)Fill") }
     var ink: Color { Color("Project\(assetName)Ink") }
 }
