@@ -21,7 +21,7 @@ private struct CalendarToolbarModifier: ViewModifier {
                     Button { model.goToNext() } label: { Image(systemName: "chevron.right") }
                         .help("Next \(unit)")
                         .accessibilityLabel("Next \(unit)")
-                    Button("Today") { model.goToToday() }
+                    Button { model.goToToday() } label: { Text("Today").padding(.horizontal, Spacing.sm) }
                         .help("Go to today")
                 }
                 ToolbarItem(placement: .principal) {
