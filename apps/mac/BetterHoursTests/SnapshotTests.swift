@@ -91,7 +91,11 @@ final class SnapshotTests: XCTestCase {
 
     func testRenderPopovers() async throws {
         try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
-        for state in ["running", "idle", "empty", "error"] {
+        let suiteName = "BetterHoursSnapshots-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        for state in ["running", "idle", "empty", "error", "today"] {
+            defaults.set(state == "today" ? "today" : "current", forKey: MenubarDisplay.storageKey)
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 let store = state == "empty" || state == "error" ? try LocalStore.inMemory() : try await SampleData.seeded()
                 let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
@@ -103,7 +107,7 @@ final class SnapshotTests: XCTestCase {
                 }
                 await library.reload()
                 await timer.refresh()
-                let view = TimerPopoverView(timer: timer, library: library, calendar: SampleData.calendar)
+                let view = TimerPopoverView(timer: timer, library: library, calendar: SampleData.calendar, defaults: defaults)
                 let file = outputDirectory.appendingPathComponent("popover-\(state)-\(name).png")
                 try await render(view, appearance: appearance, to: file, size: nil)
                 XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)

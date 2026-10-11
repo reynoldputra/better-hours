@@ -8,6 +8,21 @@ struct TimerPopoverView: View {
     let calendar: Calendar
     var openMainWindow: () -> Void = {}
     var quit: () -> Void = { NSApp.terminate(nil) }
+    @AppStorage private var display: MenubarDisplay
+
+    init(
+        timer: TimerModel, library: LibraryModel, calendar: Calendar,
+        defaults: UserDefaults = .standard,
+        openMainWindow: @escaping () -> Void = {},
+        quit: @escaping () -> Void = { NSApp.terminate(nil) }
+    ) {
+        self.timer = timer
+        self.library = library
+        self.calendar = calendar
+        self.openMainWindow = openMainWindow
+        self.quit = quit
+        _display = AppStorage(wrappedValue: .current, MenubarDisplay.storageKey, store: defaults)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +54,20 @@ struct TimerPopoverView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            Divider()
+            HStack {
+                Text("Show in menubar").foregroundStyle(Theme.muted)
+                Spacer()
+                Picker("Show in menubar", selection: $display) {
+                    ForEach(MenubarDisplay.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityLabel("Show in menubar")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, Spacing.sm)
             Divider()
             VStack(spacing: 0) {
                 MenuRow(title: "Open Better Hours", shortcut: "⌘O", action: openMainWindow)
