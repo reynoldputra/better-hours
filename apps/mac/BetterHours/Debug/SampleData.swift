@@ -33,6 +33,8 @@ enum SampleData {
         let admin = Project(name: "Admin", color: .teal)
         for project in [website, backend, writing, clients, admin] { try await store.save(project) }
 
+        for name in ["client", "ux", "meeting", "deep work", "review"] { try await store.save(Tag(name: name)) }
+
         let blocks: [(String, Project, Date, Date?)] = [
             ("Design review", website, date(5, 9), date(5, 10, 30)),
             ("Client call", clients, date(5, 13), date(5, 14)),

@@ -8,6 +8,7 @@ extension View {
 
 private struct CalendarToolbarModifier: ViewModifier {
     let model: CalendarModel
+    @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
         let unit = model.mode == .week ? "week" : "day"
@@ -35,7 +36,7 @@ private struct CalendarToolbarModifier: ViewModifier {
                     .accessibilityLabel("View")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {} label: { Image(systemName: "slider.horizontal.3") }
+                    Button { openWindow(id: "library") } label: { Image(systemName: "slider.horizontal.3") }
                         .help("Projects and tags")
                         .accessibilityLabel("Projects and tags")
                 }

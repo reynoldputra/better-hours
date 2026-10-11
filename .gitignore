@@ -5,3 +5,4 @@ DerivedData/
 .DS_Store
 
 apps/mac/.snapshots/
+apps/mac/build/

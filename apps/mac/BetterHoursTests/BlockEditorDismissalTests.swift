@@ -9,7 +9,7 @@ final class BlockEditorDismissalTests: XCTestCase {
     private func hostedEditor(_ title: String) async throws -> (CalendarModel, NSHostingView<BlockEditorView>, NSWindow) {
         let store = try await SampleData.seeded()
         let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
         await calendar.reload()
         await library.reload()
         let id = try XCTUnwrap(calendar.blocks.first { $0.title == title }?.id)

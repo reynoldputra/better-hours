@@ -20,6 +20,8 @@ struct BetterHoursApp: App {
     @State private var calendar: CalendarModel
     @State private var library: LibraryModel
     @State private var timer: TimerModel
+    @State private var typing: TextEditingTracker
+    @State private var launchAtLogin = LaunchAtLogin()
     private let demo: DemoConfiguration?
 
     init() {
@@ -28,11 +30,14 @@ struct BetterHoursApp: App {
         let clock = demo?.clock ?? Date.init
         let calendar = demo?.calendar ?? .autoupdatingCurrent
         self.demo = demo
-        let library = LibraryModel(store: store)
+        let library = LibraryModel(store: store, clock: clock, calendar: calendar)
         let timer = TimerModel(store: store, clock: clock, calendar: calendar)
         _calendar = State(initialValue: CalendarModel(store: store, clock: clock, calendar: calendar))
         _library = State(initialValue: library)
         _timer = State(initialValue: timer)
+        let typing = TextEditingTracker()
+        typing.start()
+        _typing = State(initialValue: typing)
         // The menubar must stay live with the main window closed, so these outlive any view.
         Task { await library.observeChanges() }
         Task { await timer.observeChanges() }
@@ -44,10 +49,13 @@ struct BetterHoursApp: App {
                 .frame(minWidth: 900, minHeight: 560)
                 .task { await calendar.observeChanges() }
                 .task { await calendar.tickClock() }
-                .task { await demo?.apply(to: calendar) }
+                .task { await demo?.apply(to: calendar, opener: delegate.opener) }
         }
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1120, height: 720)
+        .commands {
+            AppCommands(calendar: calendar, timer: timer, typing: typing, opener: delegate.opener)
+        }
 
         MenuBarExtra {
             MenubarPopoverHost(
@@ -57,6 +65,17 @@ struct BetterHoursApp: App {
             MenubarLabelHost(timer: timer, opener: delegate.opener)
         }
         .menuBarExtraStyle(.window)
+
+        Window("Projects and Tags", id: "library") {
+            LibraryView(library: library)
+                .frame(minWidth: 480, minHeight: 360)
+        }
+        .defaultSize(width: 560, height: 600)
+        .commandsRemoved()
+
+        Settings {
+            SettingsView(model: launchAtLogin)
+        }
     }
 
     private static func openStore() -> LocalStore {

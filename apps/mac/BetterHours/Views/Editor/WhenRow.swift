@@ -83,7 +83,7 @@ private struct DateButton: View {
             .help(label)
             .accessibilityLabel("\(label), \(title)")
             .popover(isPresented: $open, arrowEdge: .bottom) {
-                DatePicker(label, selection: Binding(get: { date }, set: onPick), displayedComponents: .date)
+                DatePicker(label, selection: Binding(get: { date }, set: { onPick($0) }), displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .labelsHidden()
                     .environment(\.calendar, calendar)

@@ -10,12 +10,13 @@ struct DemoConfiguration {
     let editorTitle: String?
     let openPopover: Bool
     let reopenWindow: Bool
+    let openLibrary: Bool
 }
 
 #if DEBUG
 extension DemoConfiguration {
     @MainActor
-    func apply(to model: CalendarModel) async {
+    func apply(to model: CalendarModel, opener: WindowOpener) async {
         if ProcessInfo.processInfo.arguments.contains("-demoClose") {
             NSApp.windows.filter(\.canBecomeMain).forEach { $0.close() }
             try? await Task.sleep(for: .seconds(1.5))
@@ -39,14 +40,38 @@ extension DemoConfiguration {
             try? await Task.sleep(for: .seconds(2))
             NSLog("demoReopen visible after reopen: %d", visible())
         }
+        if openLibrary {
+            try? await Task.sleep(for: .seconds(1))
+            opener.openLibrary?()
+        }
+        if ProcessInfo.processInfo.arguments.contains("-demoDumpMenu") {
+            try? await Task.sleep(for: .seconds(1))
+            Self.dump(NSApp.mainMenu, indent: "")
+        }
         if openPopover {
             try? await Task.sleep(for: .seconds(1))
             Self.statusButtons(in: NSApp.windows.compactMap(\.contentView)).first?.performClick(nil)
         }
     }
 
-    private static func statusButtons(in views: [NSView]) -> [NSStatusBarButton] {
-        views.flatMap { ($0 as? NSStatusBarButton).map { [$0] } ?? statusButtons(in: $0.subviews) }
+    @MainActor private static func dump(_ menu: NSMenu?, indent: String) {
+        for item in menu?.items ?? [] where !item.isSeparatorItem {
+            let keys = item.keyEquivalent.isEmpty ? "" : " [\(item.keyEquivalentModifierMask.rawValue) \(item.keyEquivalent.unicodeScalars.map(\.value))]"
+            NSLog("menu: %@%@%@ enabled=%d", indent, item.title, keys, item.isEnabled)
+            dump(item.submenu, indent: indent + "  ")
+        }
+    }
+
+    @MainActor private static func statusButtons(in views: [NSView]) -> [NSStatusBarButton] {
+        var found: [NSStatusBarButton] = []
+        for view in views {
+            if let button = view as? NSStatusBarButton {
+                found.append(button)
+            } else {
+                found += statusButtons(in: view.subviews)
+            }
+        }
+        return found
     }
 }
 
@@ -63,13 +88,14 @@ enum Demo {
             selectTitle: arguments.contains("-demoSelect") ? "API schema" : nil,
             editorTitle: arguments.contains("-demoEditor") ? "Design review" : nil,
             openPopover: arguments.contains("-demoPopover"),
-            reopenWindow: arguments.contains("-demoReopen")
+            reopenWindow: arguments.contains("-demoReopen"),
+            openLibrary: arguments.contains("-demoLibrary")
         )
     }
 }
 #else
 extension DemoConfiguration {
-    @MainActor func apply(to model: CalendarModel) async {}
+    @MainActor func apply(to model: CalendarModel, opener: WindowOpener) async {}
 }
 
 enum Demo {

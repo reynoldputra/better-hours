@@ -34,9 +34,22 @@ struct TimeGrid: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .overlay {
+                if !model.hasAnyBlocks {
+                    Text("Drag on the calendar to block time, or press Start.")
+                        .font(Fonts.body)
+                        .foregroundStyle(Theme.muted)
+                        .padding(Spacing.md)
+                        .multilineTextAlignment(.center)
+                        .allowsHitTesting(false)
+                }
+            }
             .task {
                 await Task.yield()
                 proxy.scrollTo(scrollHour, anchor: .top)
+            }
+            .onChange(of: model.revealRequest) { _, request in
+                if let request { withAnimation { proxy.scrollTo(max(0, request.hour - 2), anchor: .top) } }
             }
         }
     }

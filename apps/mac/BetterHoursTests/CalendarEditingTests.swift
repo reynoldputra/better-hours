@@ -398,27 +398,27 @@ final class CalendarEditingTests: XCTestCase {
     // MARK: Library
 
     func testCreateProjectPicksFirstUnusedColour() async throws {
-        let library = LibraryModel(store: try LocalStore.inMemory())
+        let library = LibraryModel(store: try LocalStore.inMemory(), clock: { SampleData.now }, calendar: SampleData.calendar)
         let first = try await library.createProject(name: " Alpha ")
         XCTAssertEqual(first.name, "Alpha")
         XCTAssertEqual(first.color, .blue)
         let second = try await library.createProject(name: "B")
         XCTAssertEqual(second.color, .orange)
 
-        let seeded = LibraryModel(store: store)
+        let seeded = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
         let extra = try await seeded.createProject(name: "New")
         XCTAssertEqual(extra.color, .yellow)
     }
 
     func testCreateProjectWrapsAroundWhenPaletteIsUsed() async throws {
-        let library = LibraryModel(store: try LocalStore.inMemory())
+        let library = LibraryModel(store: try LocalStore.inMemory(), clock: { SampleData.now }, calendar: SampleData.calendar)
         for index in 0..<8 { _ = try await library.createProject(name: "P\(index)") }
         let ninth = try await library.createProject(name: "P8")
         XCTAssertEqual(ninth.color, .blue)
     }
 
     func testCreateTagDeduplicates() async throws {
-        let library = LibraryModel(store: try LocalStore.inMemory())
+        let library = LibraryModel(store: try LocalStore.inMemory(), clock: { SampleData.now }, calendar: SampleData.calendar)
         let first = try await library.createTag(name: "Client")
         let second = try await library.createTag(name: "  client ")
         XCTAssertEqual(first, second)
@@ -429,7 +429,7 @@ final class CalendarEditingTests: XCTestCase {
     }
 
     func testEmptyNamesAreRejected() async throws {
-        let library = LibraryModel(store: try LocalStore.inMemory())
+        let library = LibraryModel(store: try LocalStore.inMemory(), clock: { SampleData.now }, calendar: SampleData.calendar)
         do {
             _ = try await library.createProject(name: "  ")
             XCTFail("expected an error")

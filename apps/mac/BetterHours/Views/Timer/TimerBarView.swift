@@ -4,7 +4,6 @@ import SwiftUI
 struct TimerBarView: View {
     let timer: TimerModel
     let library: LibraryModel
-    @State private var draft = ""
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -12,11 +11,11 @@ struct TimerBarView: View {
                 RunningTitleField(timer: timer)
                 ProjectMenu(timer: timer, library: library)
             } else {
-                TextField("What are you working on?", text: $draft)
+                TextField("What are you working on?", text: Binding(get: { timer.draftTitle }, set: { timer.draftTitle = $0 }))
                     .textFieldStyle(.roundedBorder)
                     .controlSize(.large)
                     .accessibilityLabel("Timer title")
-                    .onSubmit(start)
+                    .onSubmit { Task { await timer.startFromDraft() } }
             }
             Text(TimeFormat.stopwatch(timer.elapsed))
                 .font(.system(size: 20, weight: .medium, design: .monospaced))
@@ -26,13 +25,11 @@ struct TimerBarView: View {
                 Button { Task { await timer.stop() } } label: { Text("Stop").fontWeight(.semibold).foregroundStyle(Theme.onStrong).padding(.horizontal, Spacing.xs) }
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.strong)
-                    .keyboardShortcut(.return, modifiers: .command)
                     .help("Stop the timer (⌘Return)")
             } else {
-                Button(action: start) { Text("Start").fontWeight(.semibold).foregroundStyle(Theme.onAccent).padding(.horizontal, Spacing.xs) }
+                Button { Task { await timer.startFromDraft() } } label: { Text("Start").fontWeight(.semibold).foregroundStyle(Theme.onAccent).padding(.horizontal, Spacing.xs) }
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.accent)
-                    .keyboardShortcut(.return, modifiers: .command)
                     .help("Start the timer (⌘Return)")
             }
             Divider().frame(height: 28)
@@ -43,12 +40,6 @@ struct TimerBarView: View {
         .padding(.horizontal, Spacing.lg)
         .frame(height: 56)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
-    }
-
-    private func start() {
-        let title = draft
-        draft = ""
-        Task { await timer.start(title: title) }
     }
 
     private func total(_ label: String, _ value: TimeInterval) -> some View {

@@ -1,5 +1,6 @@
 import BetterHoursCore
 import AppKit
+import ServiceManagement
 import SwiftUI
 import XCTest
 @testable import Better_Hours
@@ -21,7 +22,7 @@ final class SnapshotTests: XCTestCase {
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 let store = try await SampleData.seeded()
                 let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
-                let library = LibraryModel(store: store)
+                let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 calendar.setMode(mode)
                 await calendar.reload()
@@ -56,7 +57,7 @@ final class SnapshotTests: XCTestCase {
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 let store = try await SampleData.seeded()
                 let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
-                let library = LibraryModel(store: store)
+                let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 await calendar.reload()
                 await library.reload()
@@ -76,7 +77,7 @@ final class SnapshotTests: XCTestCase {
         for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             let store = try await SampleData.seeded()
             let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
-            let library = LibraryModel(store: store)
+            let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
             let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
             await timer.stop()
             await calendar.reload()
@@ -93,7 +94,7 @@ final class SnapshotTests: XCTestCase {
         for state in ["running", "idle", "empty", "error"] {
             for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 let store = state == "empty" || state == "error" ? try LocalStore.inMemory() : try await SampleData.seeded()
-                let library = LibraryModel(store: store)
+                let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 if state == "idle" { await timer.stop() }
                 if state == "error" {
@@ -115,7 +116,7 @@ final class SnapshotTests: XCTestCase {
         for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             let store = try await SampleData.seeded()
             let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
-            let library = LibraryModel(store: store)
+            let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
             await calendar.reload()
             await library.reload()
             let id = try XCTUnwrap(calendar.blocks.first { $0.title == "Design review" }?.id)
@@ -125,6 +126,61 @@ final class SnapshotTests: XCTestCase {
             let file = outputDirectory.appendingPathComponent("editor-\(name).png")
             try await render(view, appearance: appearance, to: file, size: nil)
             XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)
+        }
+    }
+
+    func testRenderLibrary() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let seeded = try await SampleData.seeded()
+            let library = LibraryModel(store: seeded, clock: { SampleData.now }, calendar: SampleData.calendar)
+            await library.reload()
+            let backend = try XCTUnwrap(library.projects.first { $0.name == "Backend" }?.id)
+            let writing = try XCTUnwrap(library.projects.first { $0.name == "Writing" }?.id)
+            let ux = try XCTUnwrap(library.tags.first { $0.name == "ux" }?.id)
+            let review = try XCTUnwrap(library.tags.first { $0.name == "review" }?.id)
+            let empty = LibraryModel(store: try LocalStore.inMemory(), clock: { SampleData.now }, calendar: SampleData.calendar)
+            await empty.reload()
+            let cases: [(String, LibraryView)] = [
+                ("library", LibraryView(library: library)),
+                ("library-editing", LibraryView(library: library, editing: .project(writing), selection: .project(backend))),
+                ("library-tags", LibraryView(library: library, editing: .tag(review), selection: .tag(ux))),
+                ("library-new", LibraryView(library: library, editing: .newProject)),
+                ("library-empty", LibraryView(library: empty)),
+            ]
+            for (prefix, view) in cases {
+                let file = outputDirectory.appendingPathComponent("\(prefix)-\(name).png")
+                try await render(view, appearance: appearance, to: file, size: CGSize(width: 560, height: 600))
+                XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)
+            }
+        }
+    }
+
+    func testRenderSettings() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let view = SettingsView(model: LaunchAtLogin(service: FakeLoginItem(status: .notRegistered, failure: "Operation not permitted")))
+            view.model.set(true)
+            let file = outputDirectory.appendingPathComponent("settings-\(name).png")
+            try await render(view, appearance: appearance, to: file, size: nil)
+            XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)
+        }
+    }
+
+    func testRenderEmptyWeek() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let store = try LocalStore.inMemory()
+            let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            let library = LibraryModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            await calendar.reload()
+            await library.reload()
+            await timer.refresh()
+            let view = MainWindowView(calendar: calendar, library: library, timer: timer, scrollHour: 8)
+            let file = outputDirectory.appendingPathComponent("week-empty-\(name).png")
+            try await render(view, appearance: appearance, to: file, size: Self.size)
+            XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 10_000)
         }
     }
 
@@ -154,4 +210,25 @@ final class SnapshotTests: XCTestCase {
 private final class ActiveWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var isKeyWindow: Bool { true }
+}
+
+@MainActor
+final class FakeLoginItem: LoginItemService {
+    var status: SMAppService.Status
+    var failure: String?
+
+    init(status: SMAppService.Status, failure: String? = nil) {
+        self.status = status
+        self.failure = failure
+    }
+
+    func register() throws {
+        if let failure { throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: failure]) }
+        status = .enabled
+    }
+
+    func unregister() throws {
+        if let failure { throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: failure]) }
+        status = .notRegistered
+    }
 }

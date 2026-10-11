@@ -10,6 +10,7 @@ final class TimerModel {
     private(set) var weekTotal: TimeInterval = 0
     private(set) var now: Date
     private(set) var writeError: String?
+    var draftTitle = ""
 
     private let store: LocalStore
     private let clock: @Sendable () -> Date
@@ -43,6 +44,16 @@ final class TimerModel {
 
     func start(title: String) async {
         await begin(TimerSeed(title: title.trimmingCharacters(in: .whitespacesAndNewlines), projectId: nil, tagIds: []))
+    }
+
+    func startFromDraft() async {
+        let title = draftTitle
+        let started = await begin(TimerSeed(title: title.trimmingCharacters(in: .whitespacesAndNewlines), projectId: nil, tagIds: []))
+        if started && draftTitle == title { draftTitle = "" }
+    }
+
+    func toggle() async {
+        if isRunning { await stop() } else { await startFromDraft() }
     }
 
     func stop() async {
@@ -116,13 +127,16 @@ final class TimerModel {
 
     // MARK: Private
 
-    private func begin(_ seed: TimerSeed) async {
-        guard !startPending else { return }
+    @discardableResult
+    private func begin(_ seed: TimerSeed) async -> Bool {
+        guard !startPending else { return false }
         startPending = true
+        var started = false
         await serialized { [self] in
-            await perform { _ = try await store.startTimer(seed: seed, now: clock()) }
+            started = await perform { _ = try await store.startTimer(seed: seed, now: clock()) }
         }
         startPending = false
+        return started
     }
 
     // Re-reads the running block inside the write queue so a stale copy never reopens a stopped block.
@@ -146,13 +160,17 @@ final class TimerModel {
         await task.value
     }
 
-    private func perform(_ work: () async throws -> Void) async {
+    @discardableResult
+    private func perform(_ work: () async throws -> Void) async -> Bool {
+        var succeeded = true
         do {
             try await work()
         } catch {
             writeError = "\(error)"
+            succeeded = false
         }
         await refresh()
+        return succeeded
     }
 
     private func recomputeTotals() {

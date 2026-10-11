@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class WindowOpener {
     var open: (() -> Void)?
+    var openLibrary: (() -> Void)?
 
     // The scene id "main" is also the NSWindow identifier, which keeps popovers and alerts out of the check.
     private var mainWindow: NSWindow? {
@@ -32,6 +33,7 @@ struct MenubarLabelHost: View {
         MenubarLabel(timer: timer)
             .task {
                 opener.open = { openWindow(id: "main") }
+                opener.openLibrary = { openWindow(id: "library") }
                 // Saved window state can leave the app with no window at launch.
                 try? await Task.sleep(for: .milliseconds(500))
                 if !opener.hasMainWindow { opener.show() }

@@ -192,4 +192,115 @@ final class CalendarModelTests: XCTestCase {
         }
         XCTFail("condition not met in time")
     }
+
+    // MARK: New block and the empty state
+
+    func testNewBlockStartsAtTheSnappedNowForOneHour() async throws {
+        let store = try await SampleData.seeded()
+        let model = try model(store: store)
+        await model.reload()
+        let counter = ChangeCounter(store)
+        await model.newBlock()
+        let events = await counter.settled()
+        XCTAssertEqual(events, 1)
+        let editing = try XCTUnwrap(model.editing)
+        XCTAssertEqual(editing.startAt, SampleData.date(8, 12, 20))
+        XCTAssertEqual(editing.endAt, SampleData.date(8, 13, 20))
+        XCTAssertEqual(model.selectedBlockId, editing.id)
+        XCTAssertTrue(model.blocks.contains { $0.id == editing.id })
+        XCTAssertEqual(model.revealRequest?.id, editing.id)
+    }
+
+    func testNewBlockSnapsDownToTheStepAtOrBeforeNow() async throws {
+        let model = try model(now: SampleData.date(8, 12, 24, month: 10))
+        await model.newBlock()
+        XCTAssertEqual(model.editing?.startAt, SampleData.date(8, 12, 20))
+    }
+
+    func testNewBlockJumpsToTodayWhenTheRangeDoesNotContainIt() async throws {
+        let model = try model()
+        model.goToNext()
+        await model.reload()
+        XCTAssertFalse(model.containsToday)
+        await model.newBlock()
+        XCTAssertTrue(model.containsToday)
+        XCTAssertEqual(model.range.start, SampleData.date(5, 0))
+        XCTAssertEqual(model.blocks.count, 1)
+        XCTAssertNotNil(model.editing)
+    }
+
+    func testNewBlockJumpsToTodayInDayMode() async throws {
+        let model = try model()
+        model.setMode(.day)
+        model.goToPrevious()
+        await model.reload()
+        await model.newBlock()
+        XCTAssertEqual(model.range, DateInterval(start: SampleData.date(8, 0), end: SampleData.date(9, 0)))
+        XCTAssertEqual(model.blocks.count, 1)
+    }
+
+    func testEmptyDatabaseFlag() async throws {
+        let store = try LocalStore.inMemory()
+        let model = try model(store: store)
+        XCTAssertTrue(model.hasAnyBlocks, "assumed until the first load")
+        await model.reload()
+        XCTAssertFalse(model.hasAnyBlocks)
+
+        let block = TimeBlock(startAt: SampleData.date(1, 9), endAt: SampleData.date(1, 10))
+        try await store.save(block)
+        await model.reload()
+        XCTAssertTrue(model.blocks.isEmpty, "the block is in another week")
+        XCTAssertTrue(model.hasAnyBlocks)
+
+        try await store.deleteBlock(id: block.id)
+        await model.reload()
+        XCTAssertFalse(model.hasAnyBlocks)
+
+        _ = try await store.startTimer(seed: nil, now: SampleData.now)
+        await model.reload()
+        XCTAssertTrue(model.hasAnyBlocks)
+    }
+
+    func testNewBlockLateInTheDayStaysToday() async throws {
+        let late = SampleData.date(8, 23, 58)
+        let model = try model(now: late)
+        model.setMode(.day)
+        await model.reload()
+        await model.newBlock()
+        let editing = try XCTUnwrap(model.editing)
+        XCTAssertEqual(editing.startAt, SampleData.date(8, 23, 55))
+        XCTAssertEqual(model.selectedBlockId, editing.id)
+        XCTAssertTrue(model.blocks.contains { $0.id == editing.id })
+        XCTAssertEqual(model.range.start, SampleData.date(8, 0))
+    }
+
+    func testNewBlockOnTheLastDayOfTheWeekIsVisible() async throws {
+        let sunday = SampleData.date(11, 23, 58)
+        let model = try model(now: sunday)
+        await model.reload()
+        await model.newBlock()
+        XCTAssertEqual(model.editing?.startAt, SampleData.date(11, 23, 55))
+        XCTAssertEqual(model.blocks.count, 1)
+        XCTAssertEqual(model.range.start, SampleData.date(5, 0))
+    }
+
+    func testNewBlockIsANoOpWhileEditingOrDragging() async throws {
+        let store = try await SampleData.seeded()
+        let model = try model(store: store)
+        await model.reload()
+        let counter = ChangeCounter(store)
+        let existing = try XCTUnwrap(model.blocks.first)
+        model.openEditor(id: existing.id)
+        let draft = model.editing
+        await model.newBlock()
+        XCTAssertEqual(model.editing, draft)
+        model.cancelEditor()
+
+        model.beginCreate(at: SampleData.date(9, 10))
+        await model.newBlock()
+        XCTAssertNotNil(model.drag)
+        XCTAssertNil(model.editing)
+        let events = await counter.settled()
+        XCTAssertEqual(events, 0)
+    }
 }

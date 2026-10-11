@@ -231,6 +231,20 @@ final class TimerModelTests: XCTestCase {
         XCTAssertNil(model.writeError)
     }
 
+    func testFailedStartKeepsTheDraftTitleAndSuccessClearsIt() async throws {
+        let store = try LocalStore.inMemory()
+        let model = make(store)
+        model.draftTitle = "First"
+        await model.startFromDraft()
+        XCTAssertEqual(model.draftTitle, "")
+        XCTAssertTrue(model.isRunning)
+
+        model.draftTitle = "Second"
+        await model.startFromDraft()
+        XCTAssertNotNil(model.writeError, "same-millisecond restart fails")
+        XCTAssertEqual(model.draftTitle, "Second")
+    }
+
     func testModelFollowsChangesMadeElsewhere() async throws {
         let store = try LocalStore.inMemory()
         let model = make(store)

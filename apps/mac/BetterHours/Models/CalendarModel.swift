@@ -2,6 +2,11 @@ import BetterHoursCore
 import Foundation
 import Observation
 
+struct RevealRequest: Equatable {
+    let id: UUID
+    let hour: Int
+}
+
 enum CalendarMode: Equatable, Sendable {
     case week, day
 }
@@ -35,6 +40,8 @@ final class CalendarModel {
     private(set) var loadError: String?
     private(set) var selectedBlockId: UUID?
     private(set) var drag: DragPreview?
+    private(set) var hasAnyBlocks = true
+    private(set) var revealRequest: RevealRequest?
     var editing: EditorDraft?
     var pendingDeleteId: UUID?
     var writeError: String?
@@ -127,7 +134,12 @@ final class CalendarModel {
         do {
             let loaded = try await store.blocks(in: range)
             guard token == reloadToken else { return }
+            let running = try await store.runningBlock()
+            let lastEnded = try await store.lastEndedBlock()
+            let anyBlock = running != nil || lastEnded != nil
+            guard token == reloadToken else { return }
             blocks = loaded
+            hasAnyBlocks = anyBlock
             loadError = nil
             reconcile()
         } catch {
@@ -275,6 +287,23 @@ final class CalendarModel {
     }
 
     func cancelEditor() { editing = nil }
+
+    func newBlock() async {
+        guard editing == nil, drag == nil else { return }
+        refreshNow()
+        if !containsToday {
+            anchor = calendar.startOfDay(for: now)
+            await reload()
+        }
+        let nearest = snapped(now)
+        let start = nearest > now ? nearest.addingTimeInterval(-TimeInterval(BlockRules.snapMinutes * 60)) : nearest
+        let created = TimeBlock(startAt: start, endAt: start.addingTimeInterval(3600))
+        guard await perform({ try await store.save(created) }) else { return }
+        await reload()
+        selectedBlockId = created.id
+        editing = EditorDraft(block: created)
+        revealRequest = RevealRequest(id: created.id, hour: calendar.component(.hour, from: start))
+    }
 
     func saveEditor() async {
         guard let draft = editing, !isSaving, draft.validationError(now: now) == nil else { return }
