@@ -1,28 +1,69 @@
 # Better Hours
 
-Better Hours is a native macOS time tracker. You block time on a week or day calendar, or start a timer from the main window or the menubar, and tag the time with projects and tags.
+Better Hours is a calendar time tracker for macOS. Block out your time on a week or day calendar, or start a timer from the menubar and fill in the details later.
 
-![The week calendar in light mode, with a running timer](docs/screenshots/calendar-light.png)
-
-![The week calendar in dark mode](docs/screenshots/calendar-dark.png)
+![The week calendar with a running timer](docs/screenshots/calendar-dark.png)
 
 | Block editor | Menubar popover | Projects and tags |
 |---|---|---|
 | ![Editing a block: title, project, tags, date and times, notes](docs/screenshots/editor.png) | ![The menubar popover with a running timer](docs/screenshots/menubar-popover.png) | ![The projects and tags window with hours per project](docs/screenshots/projects-and-tags.png) |
 
-The screenshots show sample data from the app's debug demo mode (`-demo` launch argument).
+## Features
 
-## Status
+- **Calendar first.** Drag on the calendar to create a block, drag it to move it, and drag its edges to resize it. Everything snaps to 5 minutes.
+- **Timer in the menubar.** Start, stop, or continue your last block without opening the app. The elapsed time shows in the menubar while a timer runs.
+- **Projects and tags.** Give each block a project and any number of tags. Each project has a colour and shows its hours for the week.
+- **Totals at a glance.** See the total for each day, for today, and for the week.
+- **Private by default.** Your data stays in a file on your Mac. There is no account and the app makes no network connections.
+- **Light and dark.** The app follows your system appearance.
 
-Phase 1: the Mac app, local only. There is no account, no network access, and no sync yet. The design is in `specs/`.
+## Install
 
-## Requirements
+There is no downloadable release yet, so you build the app yourself. You need macOS 14 or later, Xcode 26, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
-- macOS 14 or later
-- Xcode 26
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+```sh
+git clone https://github.com/reynoldputra/better-hours.git
+cd better-hours
+apps/mac/scripts/build-release.sh
+```
 
-## Build and run from source
+The script prints the path of a zip file. Unzip it and move `Better Hours.app` to your Applications folder.
+
+The app is not signed with an Apple developer certificate, so macOS blocks it the first time you open it. Right-click `Better Hours.app` and choose Open, then confirm. If that does not work, try to open it once, then go to System Settings, Privacy & Security, and click Open Anyway.
+
+## Using it
+
+**On the calendar**
+
+| To | Do this |
+|---|---|
+| Create a block | Drag on empty space |
+| Move a block | Drag it to another time or day |
+| Resize a block | Drag its top or bottom edge |
+| Edit a block | Double-click it, or select it and press Return |
+| Delete a block | Select it and press Delete |
+
+**With the timer**
+
+Type what you are working on in the bar at the top and press Return, or click the menubar icon and press Start. Continue starts a new block with the same title, project, and tags as your last one.
+
+**Keyboard shortcuts**
+
+| Shortcut | Action |
+|---|---|
+| ⌘N | New block at the current time |
+| ⌘Return | Start or stop the timer |
+| ⌘T | Go to today |
+| ⌘← and ⌘→ | Previous and next week or day |
+| ⌘1 and ⌘2 | Week view and day view |
+| ⇧⌘P | Projects and tags |
+| ⌘, | Settings |
+
+## Your data
+
+Everything is stored in one file: `~/Library/Application Support/Better Hours/betterhours.sqlite`. Copy it to back up your data, or delete it to start over.
+
+## Development
 
 ```sh
 cd apps/mac
@@ -30,29 +71,13 @@ xcodegen generate
 open BetterHours.xcodeproj
 ```
 
-Then run the `BetterHours` scheme in Xcode. From the command line, `xcodebuild -scheme BetterHours -destination 'platform=macOS' build` builds it. The `.xcodeproj` is generated and not committed.
+Run the `BetterHours` scheme in Xcode. The Xcode project is generated from `project.yml` and is not committed, so run `xcodegen generate` again after pulling changes.
 
-## Tests
+To run the tests:
 
 ```sh
 cd apps/mac/Packages/BetterHoursCore && swift test
 cd apps/mac && xcodegen generate && xcodebuild -scheme BetterHours -destination 'platform=macOS' test
 ```
 
-The first runs the core package, including every fixture in `fixtures/`. The second runs the app's model and view tests.
-
-## Release build
-
-```sh
-apps/mac/scripts/build-release.sh
-```
-
-This generates the project, builds the Release configuration with ad-hoc signing, and zips the app to `apps/mac/build/BetterHours-<version>.zip`. It prints the path of the zip when it succeeds and exits non-zero on any error.
-
-## Where the data lives
-
-`~/Library/Application Support/Better Hours/betterhours.sqlite`. Delete the file to start over.
-
-## Opening an unsigned build
-
-The release build is ad-hoc signed, not notarized, so Gatekeeper blocks it the first time. Right-click `Better Hours.app` and choose Open, then confirm. Or try to open it once, then go to System Settings, Privacy & Security, and click Open Anyway.
+Launching a debug build with the `-demo` argument opens the app with sample data in a temporary database, which is how the screenshots above were made. Design documents are in `specs/`.
