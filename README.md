@@ -1,6 +1,10 @@
-# Better Hours
+<p align="center">
+  <img src="docs/logo.png" alt="Better Hours app icon" width="128" height="128">
+</p>
 
-Better Hours is a calendar time tracker for macOS. Block out your time on a week or day calendar, or start a timer from the menubar and fill in the details later.
+<h1 align="center">Better Hours</h1>
+
+<p align="center">A calendar time tracker for macOS. Block out your time on a week or day calendar, or start a timer from the menubar and fill in the details later.</p>
 
 ![The week calendar with a running timer](docs/screenshots/calendar-dark.png)
 
