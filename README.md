@@ -2,6 +2,16 @@
 
 Better Hours is a native macOS time tracker. You block time on a week or day calendar, or start a timer from the main window or the menubar, and tag the time with projects and tags.
 
+![The week calendar in light mode, with a running timer](docs/screenshots/calendar-light.png)
+
+![The week calendar in dark mode](docs/screenshots/calendar-dark.png)
+
+| Block editor | Menubar popover | Projects and tags |
+|---|---|---|
+| ![Editing a block: title, project, tags, date and times, notes](docs/screenshots/editor.png) | ![The menubar popover with a running timer](docs/screenshots/menubar-popover.png) | ![The projects and tags window with hours per project](docs/screenshots/projects-and-tags.png) |
+
+The screenshots show sample data from the app's debug demo mode (`-demo` launch argument).
+
 ## Status
 
 Phase 1: the Mac app, local only. There is no account, no network access, and no sync yet. The design is in `specs/`.

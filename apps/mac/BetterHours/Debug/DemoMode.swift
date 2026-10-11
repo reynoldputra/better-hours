@@ -24,6 +24,12 @@ extension DemoConfiguration {
         }
         do { try await SampleData.seed(into: store) } catch { return }
         await model.reload()
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-demoLight") { NSApp.appearance = NSAppearance(named: .aqua) }
+        if arguments.contains("-demoDark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
+        if arguments.contains("-demoCompact") {
+            NSApp.windows.first { $0.identifier?.rawValue == "main" }?.setContentSize(NSSize(width: 1240, height: 780))
+        }
         if let title = editorTitle, let block = model.blocks.first(where: { $0.title == title }) {
             model.openEditor(id: block.id)
         } else if let title = selectTitle, let block = model.blocks.first(where: { $0.title == title }) {
