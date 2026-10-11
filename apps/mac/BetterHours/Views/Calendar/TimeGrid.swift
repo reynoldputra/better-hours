@@ -81,7 +81,7 @@ struct DayColumnView: View {
                 if column.isToday { nowLine }
             }
         }
-        .background(column.isWeekend ? Theme.surface : Color.clear)
+        .background(column.isToday ? Theme.accent.opacity(0.08) : column.isWeekend ? Theme.surface : Color.clear)
         .overlay(alignment: .leading) { Theme.line.frame(width: 1) }
     }
 
