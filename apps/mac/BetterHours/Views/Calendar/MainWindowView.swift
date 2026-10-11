@@ -3,12 +3,14 @@ import SwiftUI
 struct MainWindowView: View {
     let calendar: CalendarModel
     let library: LibraryModel
+    let timer: TimerModel
     var scrollHour: Int?
 
     var body: some View {
         let format = TimeFormat(calendar: calendar.calendar)
         let columns = calendar.columns
         VStack(spacing: 0) {
+            TimerBarView(timer: timer, library: library)
             if let error = calendar.loadError ?? library.loadError {
                 Text(error)
                     .font(Fonts.caption)
@@ -47,6 +49,14 @@ struct MainWindowView: View {
             Button("OK") {}
         } message: {
             Text(calendar.writeError ?? "")
+        }
+        .alert(
+            "Better Hours could not save",
+            isPresented: Binding(get: { timer.writeError != nil }, set: { if !$0 { timer.dismissError() } })
+        ) {
+            Button("OK") {}
+        } message: {
+            Text(timer.writeError ?? "")
         }
     }
 }

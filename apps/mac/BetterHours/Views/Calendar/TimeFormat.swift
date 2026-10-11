@@ -30,4 +30,9 @@ struct TimeFormat {
         let minutes = max(0, Int(interval / 60))
         return "\(minutes / 60):" + String(format: "%02d", minutes % 60)
     }
+
+    static func stopwatch(_ interval: TimeInterval) -> String {
+        let seconds = max(0, Int(interval))
+        return "\(seconds / 3600):" + String(format: "%02d:%02d", seconds / 60 % 60, seconds % 60)
+    }
 }

@@ -278,7 +278,10 @@ final class CalendarModel {
 
     func saveEditor() async {
         guard let draft = editing, !isSaving, draft.validationError(now: now) == nil else { return }
-        guard var block = block(draft.id) else {
+        isSaving = true
+        defer { isSaving = false }
+        await reload()
+        guard editing?.id == draft.id, var block = block(draft.id) else {
             editing = nil
             return
         }
@@ -293,8 +296,6 @@ final class CalendarModel {
             let newEnd = edited(end, from: originalEnd)
             if newEnd != originalEnd { block.endAt = newEnd }
         }
-        isSaving = true
-        defer { isSaving = false }
         let saved = block
         guard await perform({ try await store.save(saved) }) else { return }
         if editing?.id == draft.id { editing = nil }

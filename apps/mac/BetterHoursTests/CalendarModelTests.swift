@@ -150,6 +150,41 @@ final class CalendarModelTests: XCTestCase {
         XCTAssertNotEqual(slots[0].index, slots[1].index)
     }
 
+    func testSundayFirstWeekIncludesItsSundayBlock() async throws {
+        var sundayFirst = SampleData.calendar
+        sundayFirst.firstWeekday = 1
+        let store = try LocalStore.inMemory()
+        try await store.save(TimeBlock(title: "Sunday", startAt: SampleData.date(4, 10), endAt: SampleData.date(4, 12)))
+        let sunday = try model(store: store, calendar: sundayFirst)
+        await sunday.reload()
+        XCTAssertEqual(sunday.columns.first?.start, SampleData.date(4, 0))
+        XCTAssertEqual(sunday.columns.first?.total, 2 * 3600)
+        XCTAssertEqual(sunday.columns.map(\.total).reduce(0, +), 2 * 3600)
+
+        let monday = try model(store: store)
+        await monday.reload()
+        XCTAssertEqual(monday.columns.map(\.total).reduce(0, +), 0)
+    }
+
+    func testSavingAnEditorOpenedBeforeAnExternalStopKeepsTheBlockStopped() async throws {
+        let store = try await SampleData.seeded()
+        let model = try model(store: store)
+        await model.reload()
+        let running = try XCTUnwrap(model.blocks.first { $0.endAt == nil })
+        model.openEditor(id: running.id)
+
+        _ = try await store.stopTimer(now: SampleData.date(8, 12, 20))
+        model.editing?.notes = "changed"
+        await model.saveEditor()
+
+        let still = try await store.runningBlock()
+        XCTAssertNil(still)
+        let saved = try await store.blocks(in: DateInterval(start: SampleData.date(8, 0), end: SampleData.date(9, 0)))
+            .first { $0.id == running.id }
+        XCTAssertEqual(saved?.notes, "changed")
+        XCTAssertEqual(saved?.endAt, SampleData.date(8, 12, 20))
+    }
+
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
         for _ in 0..<200 {
             if condition() { return }

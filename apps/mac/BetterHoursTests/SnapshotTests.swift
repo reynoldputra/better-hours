@@ -1,3 +1,4 @@
+import BetterHoursCore
 import AppKit
 import SwiftUI
 import XCTest
@@ -21,12 +22,14 @@ final class SnapshotTests: XCTestCase {
                 let store = try await SampleData.seeded()
                 let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 let library = LibraryModel(store: store)
+                let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 calendar.setMode(mode)
                 await calendar.reload()
                 await library.reload()
-                let view = MainWindowView(calendar: calendar, library: library, scrollHour: 8)
+                await timer.refresh()
+                let view = MainWindowView(calendar: calendar, library: library, timer: timer, scrollHour: 8)
                 let file = outputDirectory.appendingPathComponent("\(mode == .week ? "week" : "day")-\(name).png")
-                try await render(view, appearance: appearance, to: file)
+                try await render(view, appearance: appearance, to: file, size: Self.size)
                 let size = try XCTUnwrap(try? Data(contentsOf: file)).count
                 XCTAssertGreaterThan(size, 10_000, "\(file.lastPathComponent) looks empty")
             }
@@ -54,22 +57,82 @@ final class SnapshotTests: XCTestCase {
                 let store = try await SampleData.seeded()
                 let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 let library = LibraryModel(store: store)
+                let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
                 await calendar.reload()
                 await library.reload()
+                await timer.refresh()
                 try configure(calendar)
-                let view = MainWindowView(calendar: calendar, library: library, scrollHour: 8)
+                let view = MainWindowView(calendar: calendar, library: library, timer: timer, scrollHour: 8)
                 let file = outputDirectory.appendingPathComponent("week-\(state)-\(name).png")
-                try await render(view, appearance: appearance, to: file)
+                try await render(view, appearance: appearance, to: file, size: Self.size)
                 let size = try XCTUnwrap(try? Data(contentsOf: file)).count
                 XCTAssertGreaterThan(size, 10_000, "\(file.lastPathComponent) looks empty")
             }
         }
     }
 
-    private func render(_ view: some View, appearance: NSAppearance.Name, to url: URL) async throws {
-        let host = NSHostingView(rootView: view.frame(width: Self.size.width, height: Self.size.height))
-        let window = NSWindow(
-            contentRect: CGRect(origin: .zero, size: Self.size),
+    func testRenderIdleWindow() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let store = try await SampleData.seeded()
+            let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            let library = LibraryModel(store: store)
+            let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            await timer.stop()
+            await calendar.reload()
+            await library.reload()
+            let view = MainWindowView(calendar: calendar, library: library, timer: timer, scrollHour: 8)
+            let file = outputDirectory.appendingPathComponent("week-idle-\(name).png")
+            try await render(view, appearance: appearance, to: file, size: Self.size)
+            XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 10_000)
+        }
+    }
+
+    func testRenderPopovers() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for state in ["running", "idle", "empty", "error"] {
+            for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+                let store = state == "empty" || state == "error" ? try LocalStore.inMemory() : try await SampleData.seeded()
+                let library = LibraryModel(store: store)
+                let timer = TimerModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+                if state == "idle" { await timer.stop() }
+                if state == "error" {
+                    await timer.start(title: "Write docs")
+                    await timer.start(title: "Again")
+                }
+                await library.reload()
+                await timer.refresh()
+                let view = TimerPopoverView(timer: timer, library: library, calendar: SampleData.calendar)
+                let file = outputDirectory.appendingPathComponent("popover-\(state)-\(name).png")
+                try await render(view, appearance: appearance, to: file, size: nil)
+                XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)
+            }
+        }
+    }
+
+    func testRenderEditor() async throws {
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for (name, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let store = try await SampleData.seeded()
+            let calendar = CalendarModel(store: store, clock: { SampleData.now }, calendar: SampleData.calendar)
+            let library = LibraryModel(store: store)
+            await calendar.reload()
+            await library.reload()
+            let id = try XCTUnwrap(calendar.blocks.first { $0.title == "Design review" }?.id)
+            calendar.openEditor(id: id)
+            let draft = try XCTUnwrap(calendar.editing)
+            let view = BlockEditorView(calendar: calendar, library: library, initial: draft)
+            let file = outputDirectory.appendingPathComponent("editor-\(name).png")
+            try await render(view, appearance: appearance, to: file, size: nil)
+            XCTAssertGreaterThan(try XCTUnwrap(try? Data(contentsOf: file)).count, 3_000)
+        }
+    }
+
+    private func render(_ view: some View, appearance: NSAppearance.Name, to url: URL, size: CGSize?) async throws {
+        let fitted = size ?? NSHostingView(rootView: view).fittingSize
+        let host = NSHostingView(rootView: view.frame(width: fitted.width, height: fitted.height))
+        let window = ActiveWindow(
+            contentRect: CGRect(origin: .zero, size: fitted),
             styleMask: [.borderless], backing: .buffered, defer: false
         )
         window.appearance = NSAppearance(named: appearance)
@@ -86,4 +149,9 @@ final class SnapshotTests: XCTestCase {
         let data = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
         try data.write(to: url)
     }
+}
+
+private final class ActiveWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var isKeyWindow: Bool { true }
 }

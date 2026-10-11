@@ -3,8 +3,10 @@ import BetterHoursCore
 import SwiftUI
 
 struct BlockEditorView: View {
-    @Bindable var calendar: CalendarModel
+    let calendar: CalendarModel
     let library: LibraryModel
+    private let blockId: UUID
+    @State private var lastKnown: DraftBox
 
     @FocusState private var titleFocused: Bool
     @FocusState private var newProjectFocused: Bool
@@ -17,22 +19,34 @@ struct BlockEditorView: View {
         case none, project(UUID), new
     }
 
+    init(calendar: CalendarModel, library: LibraryModel, initial: EditorDraft) {
+        self.calendar = calendar
+        self.library = library
+        blockId = initial.id
+        _lastKnown = State(initialValue: DraftBox(initial))
+    }
+
+    // Never a force-unwrapping binding: the popover keeps reading it while it dismisses after editing becomes nil.
+    private var draftBinding: Binding<EditorDraft> {
+        Binding(
+            get: {
+                if let live = calendar.editing, live.id == blockId { lastKnown.value = live }
+                return lastKnown.value
+            },
+            set: { value in
+                lastKnown.value = value
+                if calendar.editing?.id == blockId { calendar.editing = value }
+            }
+        )
+    }
+
     var body: some View {
-        if let draft = Binding($calendar.editing) {
-            content(draft)
-        }
+        content(draftBinding)
     }
 
     private func content(_ draft: Binding<EditorDraft>) -> some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                Text("Edit block").font(Fonts.heading)
-                Spacer()
-                Text(TimeFormat.duration(draft.wrappedValue.duration(now: calendar.now)))
-                    .font(Fonts.monoMedium)
-                    .foregroundStyle(Theme.muted)
-                    .accessibilityLabel("Duration \(TimeFormat.duration(draft.wrappedValue.duration(now: calendar.now)))")
-            }
+            Text("Edit block").font(Fonts.heading)
             field("Title") {
                 TextField("What did you work on?", text: draft.title)
                     .textFieldStyle(.roundedBorder)
@@ -40,7 +54,7 @@ struct BlockEditorView: View {
                     .focused($titleFocused)
             }
             field("Project") { projectPicker(draft) }
-            field("Tags") { TagPicker(tagIds: draft.tagIds, library: library, stillOpen: { [calendar, id = draft.wrappedValue.id] in calendar.editing?.id == id }) }
+            field("Tags") { TagPicker(tagIds: draft.tagIds, library: library, stillOpen: { [calendar, id = blockId] in calendar.editing?.id == id }) }
             times(draft)
             field("Notes") {
                 TextEditor(text: draft.notes)
@@ -149,26 +163,8 @@ struct BlockEditorView: View {
 
     private func times(_ draft: Binding<EditorDraft>) -> some View {
         let error = draft.wrappedValue.validationError(now: calendar.now)
-        return VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(alignment: .top, spacing: Spacing.md) {
-                field("Start") {
-                    DatePicker("Start", selection: draft.startAt, displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
-                }
-                field("End") {
-                    if let end = Binding(draft.endAt) {
-                        DatePicker("End", selection: end, displayedComponents: [.date, .hourAndMinute])
-                            .labelsHidden()
-                    } else {
-                        Text("Running")
-                            .foregroundStyle(Theme.accentText)
-                            .font(Fonts.bodySemibold)
-                            .padding(.horizontal, 10)
-                            .frame(height: 24)
-                            .accessibilityLabel("End: running")
-                    }
-                }
-            }
+        return VStack(alignment: .leading, spacing: Spacing.xs) {
+            field("When") { WhenRow(draft: draft, calendar: calendar.calendar, now: calendar.now) }
             if let error {
                 Text(error).font(Fonts.caption).foregroundStyle(Theme.danger)
             }
@@ -233,4 +229,9 @@ enum ProjectDot {
         image.isTemplate = false
         return Image(nsImage: image)
     }
+}
+
+private final class DraftBox {
+    var value: EditorDraft
+    init(_ value: EditorDraft) { self.value = value }
 }

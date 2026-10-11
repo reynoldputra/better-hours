@@ -109,7 +109,9 @@ struct DayColumnView: View {
         )
         .frame(width: frame.width, height: frame.height)
         .popover(isPresented: editorBinding(for: piece), arrowEdge: .trailing) {
-            BlockEditorView(calendar: model, library: library)
+            if let draft = model.editing, draft.id == piece.id {
+                BlockEditorView(calendar: model, library: library, initial: draft)
+            }
         }
         .padding(.leading, frame.minX)
         .padding(.top, frame.minY)
@@ -118,7 +120,7 @@ struct DayColumnView: View {
     private func editorBinding(for piece: DayPiece) -> Binding<Bool> {
         Binding(
             get: { piece.isFirstPiece && model.editing?.id == piece.id },
-            set: { if !$0 { model.cancelEditor() } }
+            set: { if !$0, model.editing?.id == piece.id { model.cancelEditor() } }
         )
     }
 
