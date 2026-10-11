@@ -252,7 +252,7 @@ The grid is custom SwiftUI. It is the largest piece of phase 1.
 | Drag a block's top or bottom edge | Resizes it; a grip appears on hover |
 | Click a block | Selects it |
 | Double-click, or Return on a selected block | Opens the editor |
-| Delete on a selected block | Deletes it |
+| Delete on a selected block | Asks for confirmation, then deletes it (there is no undo in phase 1) |
 | Click empty space, or Escape | Clears the selection |
 
 All drags snap to 5 minutes and cannot make a block shorter than 5 minutes. During a drag the block shows the times it would get. The store is written once, on release.
