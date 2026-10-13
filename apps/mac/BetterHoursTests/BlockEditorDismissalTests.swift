@@ -55,4 +55,23 @@ final class BlockEditorDismissalTests: XCTestCase {
         try await settle(host)
         XCTAssertNil(calendar.editing)
     }
+
+    private func textFields(in view: NSView) -> [NSTextField] {
+        view.subviews.flatMap { sub in ((sub as? NSTextField).map { [$0] } ?? []) + textFields(in: sub) }
+    }
+
+    func testTypedEndTimeIsSavedWithoutLeavingTheField() async throws {
+        let (calendar, host, window) = try await hostedEditor("Design review")
+        defer { window.orderOut(nil) }
+        let id = try XCTUnwrap(calendar.editing?.id)
+        let field = try XCTUnwrap(textFields(in: host).first { $0.stringValue == "10:30" })
+        XCTAssertTrue(window.makeFirstResponder(field))
+        let editor = try XCTUnwrap(field.currentEditor() as? NSTextView)
+        editor.insertText("12:00", replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+        try await settle(host)
+        await calendar.saveEditor()
+        let saved = try XCTUnwrap(calendar.blocks.first { $0.id == id })
+        let end = SampleData.calendar.dateComponents([.hour, .minute], from: try XCTUnwrap(saved.endAt))
+        XCTAssertEqual([end.hour, end.minute], [12, 0])
+    }
 }

@@ -130,6 +130,11 @@ private struct TimeField: View {
                     commit()
                 }
             }
+            // Clicking Save never moves focus out of the field, so a valid entry is applied as it is typed.
+            .onChange(of: text) { _, typed in
+                guard typed != entry.format(value), let parsed = entry.parse(typed, on: value), parsed != value else { return }
+                onCommit(parsed)
+            }
             .onChange(of: value, initial: true) { _, new in
                 if !focused { text = entry.format(new) }
             }
